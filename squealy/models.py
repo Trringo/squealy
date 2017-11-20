@@ -6,7 +6,6 @@ from datetime import datetime
 from croniter import croniter
 
 from django.db import models
-from django.contrib.postgres import fields
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import pre_save, post_save, post_delete
 
