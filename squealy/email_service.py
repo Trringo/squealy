@@ -10,6 +10,9 @@ from .models import ScheduledReport, ScheduledReportChart,\
                            ReportParameter, ReportRecipient
 from .exceptions import SMTPException, EmailRecipientException, EmailSubjectException
 from .views import DataProcessor
+from celery.utils.log import get_task_logger
+
+logger = get_task_logger(__name__)
 
 
 def check_smtp_credentials():
@@ -111,13 +114,18 @@ def send_emails():
             report_template = template.render(Context(report_config['template_context']))
             scheduled_report.save()
             if not scheduled_report.subject:
+                logger.error("Skipping sending Mail as subject haven't been specified")
                 raise EmailSubjectException('Subject not provided for scheduled report %s' % scheduled_report.id)
             if not report_config['recipients']:
+                logger.error("Skipping sending Mail as reciepients list is empty")
                 raise EmailRecipientException('Recipients not provided for scheduled report %s' % (scheduled_report.id))
+            
+            logger.info("SMTP has been configured, sending reporting email with subject: {0}".format(scheduled_report.subject))
             send_mail(
                 scheduled_report.subject, 'Here is the message.',
                 settings.EMAIL_HOST_USER, report_config['recipients'],
                 fail_silently=False, html_message=report_template
             )
     else:
+        logger.error("Skipping sending Mail as SMTP credential are not there")
         raise SMTPException('Please specify the smtp credentials to use the scheduled reports service')

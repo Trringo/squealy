@@ -30,7 +30,11 @@ SECRET_KEY = 'g0sqj=ieq$f)znwh2d=ubk!*l5^2%z7bdj#&tq^_k3*=%kh=u1'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'trringo-reporting-prod.pt2sm2efbx.ap-south-1.elasticbeanstalk.com', 
+    'localhost', '127.0.0.1', 
+    'trringo-stage-reporting.pt2sm2efbx.ap-south-1.elasticbeanstalk.com'
+    ]
 
 # Application definition
 
