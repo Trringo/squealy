@@ -159,7 +159,7 @@ class ScheduledReport(models.Model):
         """
         function to evaluate "next_run_at" using the cron expression
         """
-        self.last_run_at = datetime.now()
+        self.last_run_at = datetime.utcnow()
         iter = croniter(self.cron_expression, self.last_run_at)
         self.next_run_at = iter.get_next(datetime)
         super(ScheduledReport, self).save(*args, **kwargs)

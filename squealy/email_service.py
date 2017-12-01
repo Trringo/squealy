@@ -105,27 +105,31 @@ def create_email_data(content=None):
 def send_emails():
     if check_smtp_credentials():
         current_time = datetime.utcnow()
-        scheduled_reports = ScheduledReport.objects.filter(next_run_at__range=(current_time + timedelta(days=-1), current_time + timedelta(days=1)))
+        scheduled_reports = ScheduledReport.objects.filter(next_run_at__lte=current_time)
         # TODO: Try to reduce the db queries here
-        for scheduled_report in scheduled_reports:
-            report_config = ScheduledReportConfig(scheduled_report).\
-                get_report_config()
-            template = Template(create_email_data(scheduled_report.template))
-            report_template = template.render(Context(report_config['template_context']))
-            scheduled_report.save()
-            if not scheduled_report.subject:
-                logger.error("Skipping sending Mail as subject haven't been specified")
-                raise EmailSubjectException('Subject not provided for scheduled report %s' % scheduled_report.id)
-            if not report_config['recipients']:
-                logger.error("Skipping sending Mail as reciepients list is empty")
-                raise EmailRecipientException('Recipients not provided for scheduled report %s' % (scheduled_report.id))
-            
-            logger.info("SMTP has been configured, sending reporting email with subject: {0}".format(scheduled_report.subject))
-            send_mail(
-                scheduled_report.subject, 'Here is the message.',
-                settings.EMAIL_HOST_USER, report_config['recipients'],
-                fail_silently=False, html_message=report_template
-            )
+        try:
+            for scheduled_report in scheduled_reports:
+                report_config = ScheduledReportConfig(scheduled_report).\
+                    get_report_config()
+                template = Template(create_email_data(scheduled_report.template))
+                report_template = template.render(Context(report_config['template_context']))
+                scheduled_report.save()
+                if not scheduled_report.subject:
+                    logger.error("Skipping sending Mail as subject haven't been specified")
+                    raise EmailSubjectException('Subject not provided for scheduled report %s' % scheduled_report.id)
+                if not report_config['recipients']:
+                    logger.error("Skipping sending Mail as reciepients list is empty")
+                    raise EmailRecipientException('Recipients not provided for scheduled report %s' % (scheduled_report.id))
+                
+                logger.info("SMTP has been configured, sending reporting email with subject: {0}".format(scheduled_report.subject))
+                send_mail(
+                    scheduled_report.subject, 'Here is the message.',
+                    settings.EMAIL_HOST_USER, report_config['recipients'],
+                    fail_silently=False, html_message=report_template
+                )
+        except Exception as e:
+            logger.error("Unable to send email - {0}".format(e))
+            raise e
     else:
         logger.error("Skipping sending Mail as SMTP credential are not there")
         raise SMTPException('Please specify the smtp credentials to use the scheduled reports service')
