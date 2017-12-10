@@ -5,9 +5,9 @@ import arrow
 def xls_eport(reports):
     file_name = "trringo-reports.xlsx"
     with xlsxwriter.Workbook(file_name) as workbook:
-        for chart in reports['charts']:
+        for chindex, chart in enumerate(reports['charts']):
             if chart['data']:
-                worksheet_name = '{0}.xlsx'.format(chart['name'])
+                worksheet_name = 'worksheet_{0}.xlsx'.format(chindex)
                 worksheet = workbook.add_worksheet(worksheet_name)
                 for index, col  in  enumerate(chart['data']['cols']):
                     worksheet.write(0, index, col['label'])
