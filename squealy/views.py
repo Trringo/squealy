@@ -491,7 +491,7 @@ def swagger(request):
 
 
 class InstantEmailReport(APIView):
-    # authentication_classes = [SessionAuthentication]
+    authentication_classes = [SessionAuthentication]
 
     def post(self, request):
         scheduled_report_id = request.data['scheduled_report_id']
