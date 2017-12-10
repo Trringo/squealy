@@ -8,6 +8,8 @@ urlpatterns = [
    url(r'^swagger.json/$',views.swagger_json_api),
    url(r'^swagger/$', login_required(views.swagger)),
    url(r'charts/$', login_required(views.ChartsLoaderView.as_view())),
+   url(r'api/v1/mail-report$', views.InstantEmailReport.as_view()),
+   url(r'api/v1/scheduled-reports$', views.ScheduledReports.as_view()),
    url(r'user/$', login_required(views.UserInformation.as_view())),
    url(r'filters/$', login_required(views.FilterLoaderView.as_view())),
    url(r'squealy/(?P<chart_url>[-\w]+)', login_required(views.ChartView.as_view())),

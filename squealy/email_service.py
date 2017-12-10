@@ -9,8 +9,11 @@ from django.conf import settings
 from .models import ScheduledReport, ScheduledReportChart,\
                            ReportParameter, ReportRecipient
 from .exceptions import SMTPException, EmailRecipientException, EmailSubjectException
-from .views import DataProcessor
+from .data_processor import DataProcessor
 from celery.utils.log import get_task_logger
+from .exporter import xls_eport
+from django.core.mail import EmailMultiAlternatives
+import arrow
 
 logger = get_task_logger(__name__)
 
@@ -23,7 +26,7 @@ def check_smtp_credentials():
         settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD
 
 
-class ScheduledReportConfig(object):
+class ReportConfig(object):
 
     def __init__(self, scheduled_report):
         """
@@ -102,34 +105,42 @@ def create_email_data(content=None):
     return content
 
 
+def email_reports(reports):
+    try:
+        for report in reports:
+            report_config = ReportConfig(report).get_report_config()
+            template = Template(create_email_data(report.template))
+            report_template = template.render(Context(report_config['template_context']))
+            report.save()
+            if not report.subject:
+                logger.error("Skipping sending Mail as subject haven't been specified")
+                raise EmailSubjectException('Subject not provided for scheduled report %s' % report.id)
+            if not report_config['recipients']:
+                logger.error("Skipping sending Mail as reciepients list is empty")
+                raise EmailRecipientException('Recipients not provided for scheduled report %s' % (report.id))
+            
+            logger.info("SMTP has been configured, sending reporting email with subject: {0}".format(report.subject))
+            email = EmailMultiAlternatives(
+                report.subject,
+                'Here is the message.',
+                settings.EMAIL_HOST_USER, 
+                report_config['recipients']
+            )
+            attachement = xls_eport(report_config['template_context'])
+            email.attach_alternative(report_template, 'text/html')
+            email.attach_file(attachement['file_name'], attachement['mime_type'])
+            email.send(fail_silently=False)
+    except Exception as e:
+        logger.error("Unable to send email - {0}".format(e))
+        raise e
+
 def send_emails():
     if check_smtp_credentials():
         current_time = datetime.utcnow()
         scheduled_reports = ScheduledReport.objects.filter(next_run_at__lte=current_time)
-        # TODO: Try to reduce the db queries here
-        try:
-            for scheduled_report in scheduled_reports:
-                report_config = ScheduledReportConfig(scheduled_report).\
-                    get_report_config()
-                template = Template(create_email_data(scheduled_report.template))
-                report_template = template.render(Context(report_config['template_context']))
-                scheduled_report.save()
-                if not scheduled_report.subject:
-                    logger.error("Skipping sending Mail as subject haven't been specified")
-                    raise EmailSubjectException('Subject not provided for scheduled report %s' % scheduled_report.id)
-                if not report_config['recipients']:
-                    logger.error("Skipping sending Mail as reciepients list is empty")
-                    raise EmailRecipientException('Recipients not provided for scheduled report %s' % (scheduled_report.id))
-                
-                logger.info("SMTP has been configured, sending reporting email with subject: {0}".format(scheduled_report.subject))
-                send_mail(
-                    scheduled_report.subject, 'Here is the message.',
-                    settings.EMAIL_HOST_USER, report_config['recipients'],
-                    fail_silently=False, html_message=report_template
-                )
-        except Exception as e:
-            logger.error("Unable to send email - {0}".format(e))
-            raise e
+        email_reports(scheduled_reports)
     else:
         logger.error("Skipping sending Mail as SMTP credential are not there")
         raise SMTPException('Please specify the smtp credentials to use the scheduled reports service')
+
+        
