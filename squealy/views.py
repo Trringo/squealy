@@ -496,13 +496,14 @@ class InstantEmailReport(APIView):
     def post(self, request):
         scheduled_report_id = request.data['scheduled_report_id']
         scheduled_report = ScheduledReport.objects.filter(id=scheduled_report_id)
-        if scheduled_report:
-            email_reports(scheduled_report)
-
-            return Response(data={'message': 'Sent successfully'},status=200)
-        else:
-            return Response(data={'message': 'No such scheduled report exists'},status=404)
-
+        try:
+            if scheduled_report:
+                email_reports(scheduled_report)
+                return Response(data={'message': 'Sent successfully'},status=200)
+            else:
+                return Response(data={'message': 'No such scheduled report exists'},status=404)
+        except Exception as e:
+            return Response(data={'message': str(e)}, status=500)
 
 class ScheduledReports(APIView):
 
