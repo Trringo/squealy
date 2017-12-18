@@ -37,6 +37,7 @@ import json, ast
 from .email_service import email_reports
 from .models import ScheduledReport
 from .data_processor import DataProcessor
+from .exporter import xls_eport_in_memory
 
 
 class DatabaseView(APIView):
@@ -56,6 +57,7 @@ class DatabaseView(APIView):
                 raise DatabaseConfigurationException('No databases found. Make sure that you have defined database configuration in django admin')
             return Response({'databases': database_response})
         except Exception as e:
+            print(e)
             return Response({'error': str(e.message)}, status.HTTP_400_BAD_REQUEST)
 
 class ChartViewPermission(BasePermission):
@@ -88,6 +90,27 @@ class ChartView(APIView):
             user = request.data.get('user', None)
             data = DataProcessor().fetch_chart_data(chart_url, params, user, request.data.get('chartType'))
             return Response(data)
+        except Exception as e:
+            return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
+
+
+class ChartDownloadView(APIView):
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request, chart_url=None, *args, **kwargs):
+        """
+        This is the endpoint for running and testing queries from the authoring interface
+        """
+        try:
+            params = request.data.get('params', {})
+            user = request.data.get('user', None)
+            data = DataProcessor().fetch_chart_data(chart_url, params, user, request.data.get('chartType'))
+            res = xls_eport_in_memory({'charts': [{'data': data}]})
+            response = HttpResponse(content_type=res['mime_type'])
+            response.write(res['content'])
+            response['Content-Disposition'] = 'attachment; filename={0}.xlsx'.format(chart_url)
+            return response
         except Exception as e:
             return Response({'error': str(e)}, status.HTTP_400_BAD_REQUEST)
 

@@ -58,7 +58,7 @@ class Chart(models.Model):
     # To accommodate custom formatting function paths too.
     format = models.CharField(max_length=50,
                               default="GoogleChartsFormatter")
-    type = models.CharField(max_length=20, default="ColumnChart")
+    type = models.CharField(max_length=20, default="TableChart")
     options = CustomJSONField(null=True, blank=True, default={})
     database = models.CharField(max_length=100, null=True, blank=True)
     transpose = models.BooleanField(default=False)

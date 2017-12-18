@@ -1,5 +1,6 @@
 import xlsxwriter
 import arrow
+import StringIO
 
 
 def xls_eport(reports):
@@ -18,5 +19,19 @@ def xls_eport(reports):
         return {'file_name': file_name, 'mime_type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
 
 
+def xls_eport_in_memory(reports):
+    output = StringIO.StringIO()
+    with xlsxwriter.Workbook(output) as workbook:
+        for chindex, chart in enumerate(reports['charts']):
+            if chart['data']:
+                worksheet_name = 'worksheet_{0}'.format(chindex)
+                worksheet = workbook.add_worksheet(worksheet_name)
+                for index, col  in  enumerate(chart['data']['cols']):
+                    worksheet.write(0, index, col['label'])
+                
+                for rindex, row in  enumerate(chart['data']['rows']):
+                    for cindex, col in  enumerate(row['c']):
+                        worksheet.write(rindex+1, cindex, col['v'])
+    return {'content': output.getvalue(), 'mime_type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
 
 
